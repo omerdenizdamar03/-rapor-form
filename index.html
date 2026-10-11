@@ -160,10 +160,7 @@ textarea { min-height: 96px; resize: vertical; }
       </div>
       <div id="pay-box" hidden>
         <span class="sub" id="l-pay">Ödeme şekli</span>
-        <div class="pair" role="group" aria-labelledby="l-pay">
-          <button type="button" class="opt" id="b-nakit" aria-pressed="false">Nakit</button>
-          <button type="button" class="opt" id="b-kart" aria-pressed="false">Havale-Kart</button>
-        </div>
+        <div class="pair" role="group" aria-labelledby="l-pay" id="pay-buttons"></div>
       </div>
       <p class="err" id="e-tahsilat" role="alert"></p>
     </section>
@@ -247,13 +244,22 @@ function b64urlDecode(s) {
   return new TextDecoder("utf-8", {fatal: true}).decode(bytes);
 }
 
+var PAY_DEFAULT = ["Nakit", "Havale-Kart"];
+
 function parsePayload(d) {
   try {
     if (!d) return null;
     var o = JSON.parse(b64urlDecode(d));
-    if (!o || !Array.isArray(o.r)) return null;
+    if (!o || (!Array.isArray(o.r) && !o.k)) return null;
     var rows = [];
-    o.r.forEach(function (r) {
+    // "k": the customer was already chosen in the chat. The page is given no
+    // name at all, only the fee to offer; one stand-in row carries it.
+    var chosen = !!o.k;
+    if (chosen) {
+      var ku = (typeof o.k.u === "number" && isFinite(o.k.u) && o.k.u > 0) ? o.k.u : null;
+      rows.push({i: "sec", m: "Sohbette seçilen müşteri", a: "", u: ku});
+    }
+    (chosen ? [] : o.r).forEach(function (r) {
       if (!r || typeof r.m !== "string" || !r.m.trim()) return;
       if (typeof r.i !== "number" && typeof r.i !== "string") return;
       var u = (typeof r.u === "number" && isFinite(r.u) && r.u > 0) ? r.u : null;
@@ -266,7 +272,9 @@ function parsePayload(d) {
       });
       return out;
     }
-    return {r: rows, p: strs(o.p), n: strs(o.n)};
+    var pays = strs(o.o);
+    return {r: rows, p: strs(o.p), n: strs(o.n), k: chosen,
+            o: pays.length >= 2 ? pays : PAY_DEFAULT};
   } catch (e) { return null; }
 }
 
@@ -317,7 +325,7 @@ function validate(s, data) {
       return {sec: "tahsilat", msg: "Tutar anlaşılamadı. Örnek: 1250 ya da 1.250,50. Tahsilat yoksa 'Tahsilat yok'a basın.", focus: "amount"};
   }
   var amt = feeAmount(s, data);
-  if (amt > 0 && s.odeme !== "Nakit" && s.odeme !== "Havale-Kart")
+  if (amt > 0 && (data.o || PAY_DEFAULT).indexOf(s.odeme) < 0)
     return {sec: "tahsilat", msg: "Ödeme şeklini seçin.", focus: "pay"};
   if (data.p.length) {
     var any = false;
@@ -371,7 +379,7 @@ function restoreDraft(raw, now, data) {
     if (d.fee === "other" || d.fee === "none") s.fee = d.fee;
     if (d.fee === "job" && s.row !== undefined && s.row !== null && findRow(data, s.row).u) s.fee = "job";
     if (typeof d.amount === "string") s.amount = d.amount.slice(0, 16);
-    if (d.odeme === "Nakit" || d.odeme === "Havale-Kart") s.odeme = d.odeme;
+    if ((data.o || PAY_DEFAULT).indexOf(d.odeme) >= 0) s.odeme = d.odeme;
     if (d.prod === "pick" || d.prod === "none") s.prod = d.prod;
     if (d.qty && typeof d.qty === "object") data.p.forEach(function (p) {
       var q = d.qty[p];
@@ -441,6 +449,11 @@ if (typeof module !== "undefined") module.exports = {
     var saved = localStorage.getItem(DRAFT_KEY);
     if (saved) { var r0 = restoreDraft(saved, Date.now(), data); if (r0) state = r0; }
   } catch (e) {}
+
+  if (data.k) {
+    state.row = "sec";
+    $("s-musteri").hidden = true;
+  }
 
   var sending = false, filterText = "";
 
@@ -519,8 +532,14 @@ if (typeof module !== "undefined") module.exports = {
   });
   $("b-fee-none").addEventListener("click", function () { state.fee = "none"; changed(); });
   $("amount").addEventListener("input", function () { state.amount = this.value; clearErrors(); save(); update(); });
-  $("b-nakit").addEventListener("click", function () { state.odeme = "Nakit"; changed(); });
-  $("b-kart").addEventListener("click", function () { state.odeme = "Havale-Kart"; changed(); });
+  var payButtons = data.o.map(function (name) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "opt"; b.setAttribute("aria-pressed", "false");
+    b.textContent = name;
+    b.addEventListener("click", function () { state.odeme = name; changed(); });
+    $("pay-buttons").appendChild(b);
+    return {name: name, el: b};
+  });
 
   // ---- products ----
   var counters = {};
@@ -586,8 +605,7 @@ if (typeof module !== "undefined") module.exports = {
     $("amount-hint").textContent = state.fee === "other" && typed != null ? "= " + formatMoney(typed) : "Örnek: 1250 ya da 1.250,50";
     var amt = feeAmount(state, data);
     $("pay-box").hidden = !(amt > 0);
-    press($("b-nakit"), state.odeme === "Nakit");
-    press($("b-kart"), state.odeme === "Havale-Kart");
+    payButtons.forEach(function (pb) { press(pb.el, state.odeme === pb.name); });
 
     $("s-urun").hidden = data.p.length === 0;
     press($("b-urun-sec"), state.prod === "pick");
