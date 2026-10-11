@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Yeni rapor</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --fb-bg: #ffffff; --fb-text: #1c1c1e; --fb-hint: #6d6d72; --fb-btn: #2481cc;
+  --fb-btntext: #ffffff; --fb-sec: #f0f1f3; --fb-err: #c62828; --fb-line: #c9ccd1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fb-bg: #17212b; --fb-text: #f5f5f5; --fb-hint: #9aa6b2; --fb-btn: #5288c1;
+    --fb-btntext: #ffffff; --fb-sec: #232e3c; --fb-err: #ff8a80; --fb-line: #3b4a5a;
+  }
+}
+:root {
+  --bg: var(--tg-theme-bg-color, var(--fb-bg));
+  --text: var(--tg-theme-text-color, var(--fb-text));
+  --hint: var(--tg-theme-hint-color, var(--fb-hint));
+  --btn: var(--tg-theme-button-color, var(--fb-btn));
+  --btntext: var(--tg-theme-button-text-color, var(--fb-btntext));
+  --sec: var(--tg-theme-secondary-bg-color, var(--fb-sec));
+  --err: var(--tg-theme-destructive-text-color, var(--fb-err));
+  --line: var(--fb-line);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+}
+main { max-width: 560px; margin: 0 auto; padding: 16px 16px calc(120px + env(safe-area-inset-bottom)); }
+h1 { font-size: 24px; margin: 0; }
+.day { margin: 2px 0 0; color: var(--hint); font-size: 15px; }
+section { margin: 22px 0 0; scroll-margin-top: 12px; }
+h2 { font-size: 17px; margin: 0 0 10px; outline: none; }
+h2 .req { color: var(--err); }
+.sub { font-size: 15px; font-weight: 600; margin: 14px 0 8px; display: block; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.opt {
+  display: block; width: 100%; min-height: 52px; padding: 10px 14px; margin: 0;
+  font: inherit; color: var(--text); background: var(--sec);
+  border: 2px solid transparent; border-radius: 12px; text-align: left;
+  overflow-wrap: anywhere; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pair .opt, .opt.center { text-align: center; }
+.opt small { display: block; color: var(--hint); font-size: 14px; }
+.opt[aria-pressed="true"] { background: var(--btn); color: var(--btntext); border-color: var(--btn); font-weight: 600; }
+.opt[aria-pressed="true"] small { color: var(--btntext); opacity: .85; }
+.opt[aria-pressed="true"]::before { content: "\2713\00a0"; }
+.opt.link { background: transparent; border-color: var(--line); text-align: center; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, h2:focus-visible {
+  outline: 3px solid var(--btn); outline-offset: 2px;
+}
+.chosen { display: flex; gap: 8px; align-items: stretch; }
+.chosen .opt { flex: 1; min-width: 0; }
+.chosen .change { flex: 0 0 auto; width: auto; min-width: 96px; text-align: center; }
+label { display: block; font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
+input[type=text], input[type=search], textarea {
+  width: 100%; min-height: 52px; padding: 10px 12px; font: inherit; font-size: 16px;
+  color: var(--text); background: var(--bg); border: 2px solid var(--line); border-radius: 12px;
+}
+textarea { min-height: 96px; resize: vertical; }
+.hint { color: var(--hint); font-size: 14px; margin: 6px 0 0; }
+.err { color: var(--err); font-size: 15px; font-weight: 600; margin: 8px 0 0; min-height: 0; }
+.err:empty { display: none; }
+.sec-err { border-left: 4px solid var(--err); padding-left: 10px; }
+.counter { display: flex; align-items: center; gap: 8px; }
+.counter .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.counter button {
+  width: 56px; height: 52px; font-size: 26px; line-height: 1; border-radius: 12px; border: 0;
+  background: var(--sec); color: var(--text); cursor: pointer;
+}
+.counter button:disabled { opacity: .35; }
+.counter .n { min-width: 36px; text-align: center; font-size: 20px; font-weight: 700; }
+.counter.on .name { font-weight: 600; }
+.banner { padding: 12px 14px; border-radius: 12px; margin: 14px 0 0; font-size: 15px; background: var(--sec); }
+.banner.bad { border: 2px solid var(--err); color: var(--err); font-weight: 600; }
+.go {
+  display: block; width: 100%; min-height: 56px; margin-top: 8px; padding: 12px; font: inherit;
+  font-size: 18px; font-weight: 700; color: var(--btntext); background: var(--btn);
+  border: 0; border-radius: 14px; cursor: pointer;
+}
+.go:disabled { opacity: .6; }
+.next { margin-top: 28px; color: var(--hint); font-size: 15px; font-weight: 600; }
+.small { color: var(--hint); font-size: 13px; margin: 10px 2px 0; }
+.testbox { margin-top: 22px; border: 2px dashed var(--hint); border-radius: 12px; padding: 12px; }
+.testbox b { display: block; margin-bottom: 6px; }
+.testbox pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Yeni rapor</h1>
+    <p class="day" id="gun"></p>
+  </header>
+
+  <div id="fatal" class="banner bad" role="alert" hidden></div>
+  <div id="sample" class="banner" hidden></div>
+
+  <div id="form">
+    <section id="s-musteri" aria-labelledby="h-musteri">
+      <h2 id="h-musteri" tabindex="-1">Müşteri <span class="req" aria-hidden="true">*</span></h2>
+      <div id="m-pick">
+        <input type="search" id="filter" placeholder="Müşteri ara" aria-label="Müşteri ara" autocomplete="off" hidden>
+        <div class="stack" id="rows" style="margin-top:8px"></div>
+        <div class="stack" style="margin-top:8px"><button type="button" class="opt" id="b-yok" aria-pressed="false">Listede yok</button></div>
+      </div>
+      <div id="m-chosen" class="chosen" hidden>
+        <button type="button" class="opt" id="chosen-card" aria-pressed="true" tabindex="-1"></button>
+        <button type="button" class="opt change" id="b-degistir">Değiştir</button>
+      </div>
+      <div id="m-name" hidden>
+        <label for="name">Müşteri adı</label>
+        <input type="text" id="name" maxlength="80" autocomplete="off" autocapitalize="words">
+        <p class="hint">Eşleştirme için yönetici incelemesine gönderilecek.</p>
+      </div>
+      <p class="err" id="e-musteri" role="alert"></p>
+    </section>
+
+    <section id="s-durum" aria-labelledby="h-durum">
+      <h2 id="h-durum" tabindex="-1">İş bitti mi? <span class="req" aria-hidden="true">*</span></h2>
+      <div class="pair">
+        <button type="button" class="opt" id="b-bitti" aria-pressed="false">Bitti</button>
+        <button type="button" class="opt" id="b-bitmedi" aria-pressed="false">Bitmedi</button>
+      </div>
+      <div id="neden-box" hidden>
+        <span class="sub" id="l-neden">Neden bitmedi?</span>
+        <div class="stack" id="neden-list" role="group" aria-labelledby="l-neden"></div>
+        <div id="diger-box" hidden>
+          <label for="diger">Açıklama</label>
+          <input type="text" id="diger" maxlength="200" autocomplete="off">
+        </div>
+      </div>
+      <p class="err" id="e-durum" role="alert"></p>
+    </section>
+
+    <section id="s-tahsilat" aria-labelledby="h-tahsilat">
+      <h2 id="h-tahsilat" tabindex="-1">Tahsilat <span class="req" aria-hidden="true">*</span></h2>
+      <div class="stack">
+        <button type="button" class="opt" id="b-fee-job" aria-pressed="false" hidden></button>
+        <div class="pair">
+          <button type="button" class="opt" id="b-fee-other" aria-pressed="false">Farklı tutar</button>
+          <button type="button" class="opt" id="b-fee-none" aria-pressed="false">Tahsilat yok</button>
+        </div>
+      </div>
+      <div id="amount-box" hidden>
+        <label for="amount">Tahsil edilen tutar (TL)</label>
+        <input type="text" id="amount" inputmode="decimal" autocomplete="off" maxlength="16" placeholder="1250">
+        <p class="hint" id="amount-hint"></p>
+      </div>
+      <div id="pay-box" hidden>
+        <span class="sub" id="l-pay">Ödeme şekli</span>
+        <div class="pair" role="group" aria-labelledby="l-pay">
+          <button type="button" class="opt" id="b-nakit" aria-pressed="false">Nakit</button>
+          <button type="button" class="opt" id="b-kart" aria-pressed="false">Havale-Kart</button>
+        </div>
+      </div>
+      <p class="err" id="e-tahsilat" role="alert"></p>
+    </section>
+
+    <section id="s-urun" aria-labelledby="h-urun">
+      <h2 id="h-urun" tabindex="-1">Ürün satışı <span class="req" aria-hidden="true">*</span></h2>
+      <div class="pair">
+        <button type="button" class="opt" id="b-urun-sec" aria-pressed="false">Ürün seç</button>
+        <button type="button" class="opt" id="b-urun-yok" aria-pressed="false">Ürün satılmadı</button>
+      </div>
+      <div class="stack" id="urun-list" style="margin-top:10px" hidden></div>
+      <p class="err" id="e-urun" role="alert"></p>
+    </section>
+
+    <section id="s-not">
+      <button type="button" class="opt link" id="b-not" aria-expanded="false">+ Not ekle</button>
+      <div id="not-box" hidden>
+        <label for="not">Not</label>
+        <textarea id="not" maxlength="500"></textarea>
+        <p class="hint" id="not-count">0/500</p>
+      </div>
+    </section>
+
+    <p class="next">Sonraki adım: fotoğraflar</p>
+    <button type="button" class="go" id="go">Fotoğraflara geç</button>
+    <p class="err" id="e-send" role="alert"></p>
+    <p class="small">Bu adımdan sonra sohbette fotoğraf istenecek. Rapor ancak orada 'Gönder'e basınca iletilir.</p>
+
+    <div class="testbox" id="testbox" hidden>
+      <b>Test modu</b>
+      <p class="hint" style="margin:0 0 8px">Telegram dışında açıldı; veri gönderilmez. Gönderilecek içerik:</p>
+      <pre id="testout"></pre>
+    </div>
+  </div>
+</main>
+
+<script id="core">
+// ---- pure logic (no DOM): tested with node ----
+var DIGER = "__diger";
+var DRAFT_KEY = "rapor_taslak_v1";
+var DRAFT_MAX_AGE = 30 * 60 * 1000;
+
+// Turkish-safe folding for the filter box: never uses locale casing.
+function foldTr(s) {
+  var map = {"ç":"c","Ç":"c","ğ":"g","Ğ":"g","ı":"i","I":"i","İ":"i","ö":"o","Ö":"o","ş":"s","Ş":"s","ü":"u","Ü":"u"};
+  var out = "";
+  s = String(s == null ? "" : s);
+  for (var k = 0; k < s.length; k++) {
+    var ch = s.charAt(k);
+    if (map[ch]) { out += map[ch]; continue; }
+    var c = ch.charCodeAt(0);
+    out += (c >= 65 && c <= 90) ? String.fromCharCode(c + 32) : ch;
+  }
+  return out;
+}
+
+// "1250", "1.250", "1.250,50", "1250 tl", "12,5" -> number; anything else -> null.
+function parseMoney(raw) {
+  if (typeof raw !== "string") return null;
+  var s = raw.replace(/[\s ]+/g, " ").trim();
+  s = s.replace(/\s*(?:tl|₺)$/i, "").trim();
+  var num;
+  if (/^\d+(,\d{1,2})?$/.test(s)) num = Number(s.replace(",", "."));
+  else if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) num = Number(s.replace(/\./g, "").replace(",", "."));
+  else return null;
+  if (!(num > 0) || num > 1000000) return null;
+  return Math.round(num * 100) / 100;
+}
+
+function formatMoney(n) {
+  var cents = Math.round(n * 100), whole = Math.floor(cents / 100), frac = cents % 100;
+  var w = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return w + (frac ? "," + (frac < 10 ? "0" + frac : String(frac)) : "") + " TL";
+}
+
+function b64urlDecode(s) {
+  s = String(s).replace(/-/g, "+").replace(/_/g, "/").replace(/[^A-Za-z0-9+\/]/g, "");
+  while (s.length % 4) s += "=";
+  var bin = atob(s), bytes = new Uint8Array(bin.length);
+  for (var k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+  return new TextDecoder("utf-8", {fatal: true}).decode(bytes);
+}
+
+function parsePayload(d) {
+  try {
+    if (!d) return null;
+    var o = JSON.parse(b64urlDecode(d));
+    if (!o || !Array.isArray(o.r)) return null;
+    var rows = [];
+    o.r.forEach(function (r) {
+      if (!r || typeof r.m !== "string" || !r.m.trim()) return;
+      if (typeof r.i !== "number" && typeof r.i !== "string") return;
+      var u = (typeof r.u === "number" && isFinite(r.u) && r.u > 0) ? r.u : null;
+      rows.push({i: r.i, m: r.m, a: typeof r.a === "string" ? r.a : "", u: u});
+    });
+    function strs(x) {
+      var out = [];
+      (Array.isArray(x) ? x : []).forEach(function (v) {
+        if (typeof v === "string" && v.trim() && out.indexOf(v) < 0) out.push(v);
+      });
+      return out;
+    }
+    return {r: rows, p: strs(o.p), n: strs(o.n)};
+  } catch (e) { return null; }
+}
+
+function findRow(data, id) {
+  for (var k = 0; k < data.r.length; k++) if (String(data.r[k].i) === String(id)) return data.r[k];
+  return null;
+}
+
+function makeState() {
+  return {row: undefined, name: "", durum: null, neden: null, diger: "", fee: null,
+          amount: "", odeme: null, prod: null, qty: {}, note: ""};
+}
+
+function cleanName(s) { return String(s == null ? "" : s).replace(/\s+/g, " ").trim(); }
+
+function feeAmount(s, data) {
+  if (s.fee === "none") return 0;
+  if (s.fee === "job") { var r = findRow(data, s.row); return r && r.u ? r.u : null; }
+  if (s.fee === "other") return parseMoney(s.amount);
+  return null;
+}
+
+// Returns null when everything is answered, else {sec, msg, focus?}.
+function validate(s, data) {
+  if (s.row === undefined) return {sec: "musteri", msg: "Müşteri seçin."};
+  if (s.row === null) {
+    var nm = cleanName(s.name);
+    if (nm.length < 3 || nm.length > 80 || !/\p{L}/u.test(nm))
+      return {sec: "musteri", msg: "Müşteri adını yazın (en az 3 harf).", focus: "name"};
+  } else if (!findRow(data, s.row)) {
+    return {sec: "musteri", msg: "Bu iş listede yok. Müşteriyi yeniden seçin."};
+  }
+  if (s.durum !== "Bitti" && s.durum !== "Bitmedi")
+    return {sec: "durum", msg: "İşin bitip bitmediğini seçin."};
+  if (s.durum === "Bitmedi") {
+    if (s.neden === DIGER) {
+      var t = cleanName(s.diger);
+      if (t.length < 3 || t.length > 200) return {sec: "durum", msg: "Açıklamayı yazın (en az 3 harf).", focus: "diger"};
+    } else if (s.neden == null || data.n.indexOf(s.neden) < 0) {
+      return {sec: "durum", msg: "Neden bitmediğini seçin."};
+    }
+  }
+  if (s.fee == null) return {sec: "tahsilat", msg: "Tahsilatı belirtin."};
+  if (s.fee === "job" && feeAmount(s, data) == null) return {sec: "tahsilat", msg: "Tahsilatı belirtin."};
+  if (s.fee === "other") {
+    if (!String(s.amount).trim()) return {sec: "tahsilat", msg: "Tutarı yazın. Örnek: 1250", focus: "amount"};
+    if (parseMoney(s.amount) == null)
+      return {sec: "tahsilat", msg: "Tutar anlaşılamadı. Örnek: 1250 ya da 1.250,50. Tahsilat yoksa 'Tahsilat yok'a basın.", focus: "amount"};
+  }
+  var amt = feeAmount(s, data);
+  if (amt > 0 && s.odeme !== "Nakit" && s.odeme !== "Havale-Kart")
+    return {sec: "tahsilat", msg: "Ödeme şeklini seçin.", focus: "pay"};
+  if (data.p.length) {
+    var any = false;
+    if (s.prod === "pick") data.p.forEach(function (p) { if ((s.qty[p] | 0) > 0) any = true; });
+    if (s.prod !== "none" && !(s.prod === "pick" && any))
+      return {sec: "urun", msg: "Ürün seçin ya da 'Ürün satılmadı'ya basın."};
+  }
+  if (String(s.note).length > 500) return {sec: "not", msg: "Not en fazla 500 karakter olabilir."};
+  return null;
+}
+
+// Call only after validate() returned null.
+function buildOutput(s, data) {
+  var out = {
+    row: s.row === null ? null : findRow(data, s.row).i,
+    musteri: s.row === null ? cleanName(s.name) : "",
+    durum: s.durum,
+    neden: s.durum === "Bitmedi" ? (s.neden === DIGER ? cleanName(s.diger) : s.neden) : "",
+    tutar: feeAmount(s, data),
+    odeme: null,
+    urunler: {},
+    not: String(s.note).trim()
+  };
+  if (out.tutar > 0) out.odeme = s.odeme;
+  if (s.prod === "pick") data.p.forEach(function (p) {
+    var q = s.qty[p] | 0;
+    if (q > 0) out.urunler[p] = Math.min(q, 99);
+  });
+  return out;
+}
+
+function utf8Bytes(str) { return new TextEncoder().encode(str).length; }
+
+// Restore a saved draft only if fresh (<30 min) and its row still exists.
+function restoreDraft(raw, now, data) {
+  try {
+    var o = JSON.parse(raw);
+    if (!o || typeof o.t !== "number" || !o.s) return null;
+    if (now - o.t > DRAFT_MAX_AGE || now - o.t < -60000) return null;
+    var d = o.s, s = makeState();
+    if (d.row === null) s.row = null;
+    else if (d.row !== undefined) {
+      var r = findRow(data, d.row);
+      if (!r) return null;
+      s.row = r.i;
+    }
+    if (typeof d.name === "string") s.name = d.name.slice(0, 80);
+    if (d.durum === "Bitti" || d.durum === "Bitmedi") s.durum = d.durum;
+    if (d.neden === DIGER || (typeof d.neden === "string" && data.n.indexOf(d.neden) >= 0)) s.neden = d.neden;
+    if (typeof d.diger === "string") s.diger = d.diger.slice(0, 200);
+    if (d.fee === "other" || d.fee === "none") s.fee = d.fee;
+    if (d.fee === "job" && s.row !== undefined && s.row !== null && findRow(data, s.row).u) s.fee = "job";
+    if (typeof d.amount === "string") s.amount = d.amount.slice(0, 16);
+    if (d.odeme === "Nakit" || d.odeme === "Havale-Kart") s.odeme = d.odeme;
+    if (d.prod === "pick" || d.prod === "none") s.prod = d.prod;
+    if (d.qty && typeof d.qty === "object") data.p.forEach(function (p) {
+      var q = d.qty[p];
+      if (typeof q === "number" && q >= 1 && q <= 99 && q === Math.floor(q)) s.qty[p] = q;
+    });
+    if (typeof d.note === "string") s.note = d.note.slice(0, 500);
+    return s;
+  } catch (e) { return null; }
+}
+
+var SAMPLE = {
+  r: [
+    {i: 101, m: "Şükrü Işık", a: "Üsküdar, Çiçek Sk. 4", u: 800},
+    {i: 102, m: "Ahmet Yılmaz", a: "Kadıköy, Moda Cd. 12", u: 1250},
+    {i: 103, m: "Ayşe Öztürk", a: "Ataşehir, Barbaros Mh.", u: null},
+    {i: 104, m: "İbrahim Çelik", a: "Beşiktaş, Barbaros Blv. 7", u: 1250.5},
+    {i: 105, m: "Gülşen Demir", a: "Maltepe, Bağdat Cd. 220", u: 450},
+    {i: 106, m: "Mehmet Kaya", a: "Pendik", u: 2300},
+    {i: 107, m: "Ömer Şahin", a: "Kartal, Yakacık", u: null},
+    {i: 108, m: "Zeynep Ağaoğlu", a: "Sarıyer, Tarabya Cd. 3", u: 600}
+  ],
+  p: ["Koruyucu", "Duvar aparatı", "Kumanda", "Anten kablosu"],
+  n: ["Parça bekleniyor", "Müşteri evde yoktu", "Randevu ertelendi"]
+};
+
+if (typeof module !== "undefined") module.exports = {
+  foldTr: foldTr, parseMoney: parseMoney, formatMoney: formatMoney, b64urlDecode: b64urlDecode,
+  parsePayload: parsePayload, makeState: makeState, validate: validate, buildOutput: buildOutput,
+  utf8Bytes: utf8Bytes, restoreDraft: restoreDraft, findRow: findRow, DIGER: DIGER
+};
+</script>
+
+<script id="ui">
+(function () {
+  var tg = (window.Telegram && window.Telegram.WebApp) || null;
+  var hashSaysTelegram = /tgWebApp/.test(location.hash || "") || /Telegram/.test(navigator.userAgent || "");
+  var inTelegram = !!(tg && tg.platform && tg.platform !== "unknown") || hashSaysTelegram;
+  var canSend = !!(tg && typeof tg.sendData === "function" && inTelegram);
+  try { if (tg) { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } } catch (e) {}
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  var now = new Date();
+  function p2(n) { return (n < 10 ? "0" : "") + n; }
+  $("gun").textContent = "İş günü: " + p2(now.getDate()) + "." + p2(now.getMonth() + 1) + "." + now.getFullYear();
+
+  // ---- data ----
+  var data = null;
+  var params = new URLSearchParams(location.search);
+  var d = params.get("d");
+  if (d) data = parsePayload(d);
+  if (!data) {
+    if (inTelegram) {
+      $("fatal").hidden = false;
+      $("fatal").textContent = "Liste okunamadı. Formu kapatıp sohbetteki 'Yeni rapor' düğmesine yeniden basın.";
+      $("form").hidden = true;
+      return;
+    }
+    data = SAMPLE;
+    $("sample").hidden = false;
+    $("sample").textContent = d
+      ? "Bağlantıdaki veri okunamadı; örnek veri gösteriliyor (yalnızca test için)."
+      : "Bağlantıda veri yok; örnek veri gösteriliyor (yalnızca test için).";
+  }
+  if (inTelegram && !canSend) {
+    $("fatal").hidden = false;
+    $("fatal").textContent = "Telegram bağlantısı kurulamadı. Formu kapatıp yeniden açın.";
+  }
+
+  var state = makeState();
+  try {
+    var saved = localStorage.getItem(DRAFT_KEY);
+    if (saved) { var r0 = restoreDraft(saved, Date.now(), data); if (r0) state = r0; }
+  } catch (e) {}
+
+  var sending = false, filterText = "";
+
+  function save() {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({t: Date.now(), s: state})); } catch (e) {}
+  }
+  function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+  function clearErrors() {
+    ["musteri", "durum", "tahsilat", "urun", "send"].forEach(function (k) { $("e-" + k).textContent = ""; });
+    Array.prototype.forEach.call(document.querySelectorAll(".sec-err"), function (n) { n.classList.remove("sec-err"); });
+  }
+  function changed() { clearErrors(); save(); update(); }
+  function press(b, on) { b.setAttribute("aria-pressed", on ? "true" : "false"); }
+
+  // ---- customer ----
+  function cardLabel(btn, m, a) {
+    btn.textContent = "";
+    btn.appendChild(document.createTextNode(m));
+    if (a) btn.appendChild(el("small", "", a));
+  }
+  function renderRows() {
+    var box = $("rows");
+    box.textContent = "";
+    var q = foldTr(filterText.trim()), shown = 0;
+    data.r.forEach(function (r) {
+      if (q && foldTr(r.m + " " + r.a).indexOf(q) < 0) return;
+      var b = el("button", "opt");
+      b.type = "button";
+      press(b, false);
+      cardLabel(b, r.m, r.a);
+      b.addEventListener("click", function () { setRow(r.i); });
+      box.appendChild(b);
+      shown++;
+    });
+    if (!shown) box.appendChild(el("p", "hint", data.r.length ? "Eşleşen iş yok." : "Bugünün listesinde iş yok."));
+  }
+  function setRow(id) {
+    state.row = id;
+    if (state.fee === "job") state.fee = null; // fee differs per row; typed amount is kept
+    changed();
+    $("b-degistir").focus();
+  }
+  $("b-yok").addEventListener("click", function () { setRow(null); setTimeout(function () { $("name").focus(); }, 0); });
+  $("b-degistir").addEventListener("click", function () {
+    state.row = undefined;
+    if (state.fee === "job") state.fee = null;
+    changed();
+  });
+  $("filter").addEventListener("input", function () { filterText = this.value; renderRows(); });
+  $("name").addEventListener("input", function () { state.name = this.value; clearErrors(); save(); });
+
+  // ---- outcome ----
+  $("b-bitti").addEventListener("click", function () { state.durum = "Bitti"; changed(); });
+  $("b-bitmedi").addEventListener("click", function () { state.durum = "Bitmedi"; changed(); });
+  function renderReasons() {
+    var box = $("neden-list");
+    box.textContent = "";
+    data.n.concat([DIGER]).forEach(function (n) {
+      var b = el("button", "opt", n === DIGER ? "Diğer" : n);
+      b.type = "button";
+      b.dataset.v = n;
+      b.addEventListener("click", function () {
+        state.neden = n; changed();
+        if (n === DIGER) setTimeout(function () { $("diger").focus(); }, 0);
+      });
+      box.appendChild(b);
+    });
+  }
+  $("diger").addEventListener("input", function () { state.diger = this.value; clearErrors(); save(); });
+
+  // ---- collection ----
+  $("b-fee-job").addEventListener("click", function () { state.fee = "job"; changed(); });
+  $("b-fee-other").addEventListener("click", function () {
+    state.fee = "other"; changed();
+    setTimeout(function () { $("amount").focus(); }, 0);
+  });
+  $("b-fee-none").addEventListener("click", function () { state.fee = "none"; changed(); });
+  $("amount").addEventListener("input", function () { state.amount = this.value; clearErrors(); save(); update(); });
+  $("b-nakit").addEventListener("click", function () { state.odeme = "Nakit"; changed(); });
+  $("b-kart").addEventListener("click", function () { state.odeme = "Havale-Kart"; changed(); });
+
+  // ---- products ----
+  var counters = {};
+  function renderProducts() {
+    var box = $("urun-list");
+    box.textContent = "";
+    data.p.forEach(function (p) {
+      var row = el("div", "counter");
+      var name = el("span", "name", p);
+      var minus = el("button", "", "−"), plus = el("button", "", "+"), n = el("span", "n", "0");
+      minus.type = plus.type = "button";
+      minus.setAttribute("aria-label", p + " azalt");
+      plus.setAttribute("aria-label", p + " artır");
+      n.setAttribute("aria-live", "polite");
+      minus.addEventListener("click", function () {
+        state.qty[p] = Math.max(0, (state.qty[p] | 0) - 1); if (!state.qty[p]) delete state.qty[p]; changed();
+      });
+      plus.addEventListener("click", function () { state.qty[p] = Math.min(99, (state.qty[p] | 0) + 1); changed(); });
+      row.appendChild(name); row.appendChild(minus); row.appendChild(n); row.appendChild(plus);
+      box.appendChild(row);
+      counters[p] = {row: row, n: n, minus: minus, plus: plus};
+    });
+  }
+  $("b-urun-sec").addEventListener("click", function () { state.prod = "pick"; changed(); });
+  $("b-urun-yok").addEventListener("click", function () { state.prod = "none"; changed(); }); // counts kept
+
+  // ---- note ----
+  var noteOpen = !!state.note;
+  $("b-not").addEventListener("click", function () {
+    noteOpen = !noteOpen; update();
+    if (noteOpen) $("not").focus();
+  });
+  $("not").addEventListener("input", function () { state.note = this.value; save(); update(); });
+
+  // ---- sync view with state ----
+  function update() {
+    var picking = state.row === undefined;
+    $("m-pick").hidden = !picking;
+    $("m-chosen").hidden = picking;
+    $("m-name").hidden = state.row !== null;
+    if (!picking) {
+      var row = state.row === null ? null : findRow(data, state.row);
+      var c = $("chosen-card");
+      if (row) cardLabel(c, row.m, row.a); else cardLabel(c, "Listede yok", "");
+    }
+    press($("b-yok"), false);
+    $("filter").hidden = !(picking && data.r.length > 6);
+
+    press($("b-bitti"), state.durum === "Bitti");
+    press($("b-bitmedi"), state.durum === "Bitmedi");
+    $("neden-box").hidden = state.durum !== "Bitmedi";
+    Array.prototype.forEach.call($("neden-list").children, function (b) { press(b, state.neden === b.dataset.v); });
+    $("diger-box").hidden = !(state.durum === "Bitmedi" && state.neden === DIGER);
+
+    var cur = state.row == null ? null : findRow(data, state.row);
+    var jb = $("b-fee-job");
+    jb.hidden = !(cur && cur.u);
+    if (cur && cur.u) { jb.textContent = "İş bedeli kadar: " + formatMoney(cur.u); press(jb, state.fee === "job"); }
+    press($("b-fee-other"), state.fee === "other");
+    press($("b-fee-none"), state.fee === "none");
+    $("amount-box").hidden = state.fee !== "other";
+    var typed = parseMoney(state.amount);
+    $("amount-hint").textContent = state.fee === "other" && typed != null ? "= " + formatMoney(typed) : "Örnek: 1250 ya da 1.250,50";
+    var amt = feeAmount(state, data);
+    $("pay-box").hidden = !(amt > 0);
+    press($("b-nakit"), state.odeme === "Nakit");
+    press($("b-kart"), state.odeme === "Havale-Kart");
+
+    $("s-urun").hidden = data.p.length === 0;
+    press($("b-urun-sec"), state.prod === "pick");
+    press($("b-urun-yok"), state.prod === "none");
+    $("urun-list").hidden = state.prod !== "pick";
+    data.p.forEach(function (p) {
+      var c = counters[p], q = state.qty[p] | 0;
+      c.n.textContent = String(q);
+      c.minus.disabled = q <= 0;
+      c.plus.disabled = q >= 99;
+      c.row.classList.toggle("on", q > 0);
+    });
+
+    $("not-box").hidden = !noteOpen;
+    $("b-not").setAttribute("aria-expanded", noteOpen ? "true" : "false");
+    $("b-not").textContent = noteOpen ? "− Notu gizle" : "+ Not ekle";
+    $("not-count").textContent = state.note.length + "/500";
+  }
+
+  // ---- submit ----
+  function showError(v) {
+    var sec = $("s-" + v.sec);
+    var msg = $("e-" + v.sec);
+    if (msg) msg.textContent = v.msg;
+    if (sec) sec.classList.add("sec-err");
+    var target = v.focus === "pay" ? $("b-nakit") : (v.focus ? $(v.focus) : sec.querySelector("h2"));
+    if (target && target.hidden) target = sec.querySelector("h2");
+    sec.scrollIntoView({block: "start", behavior: "smooth"});
+    if (target) try { target.focus({preventScroll: true}); } catch (e) { target.focus(); }
+  }
+  var goBtn = $("go");
+  goBtn.addEventListener("click", function () {
+    if (sending) return;
+    clearErrors();
+    var v = validate(state, data);
+    if (v) { showError(v); return; }
+    var out = buildOutput(state, data), json = JSON.stringify(out), bytes = utf8Bytes(json);
+    if (bytes > 4096) {
+      $("e-send").textContent = "Rapor çok uzun (" + bytes + " bayt, en çok 4096). Notu ya da açıklamayı kısaltın.";
+      return;
+    }
+    if (!canSend) {
+      $("testbox").hidden = false;
+      $("testout").textContent = JSON.stringify(out, null, 2) + "\n\n(" + bytes + " bayt)";
+      $("testbox").scrollIntoView({block: "start", behavior: "smooth"});
+      return;
+    }
+    sending = true;
+    goBtn.disabled = true;
+    goBtn.textContent = "Aktarılıyor…";
+    try {
+      tg.sendData(json);
+      clearDraft();
+      setTimeout(function () {
+        sending = false; goBtn.disabled = false; goBtn.textContent = "Fotoğraflara geç";
+        $("e-send").textContent = "Aktarılamadı. Bağlantıyı kontrol edip tekrar deneyin.";
+      }, 10000);
+    } catch (e) {
+      sending = false; goBtn.disabled = false; goBtn.textContent = "Fotoğraflara geç";
+      $("e-send").textContent = "Aktarılamadı. Bağlantıyı kontrol edip tekrar deneyin.";
+    }
+  });
+
+  // keep focused fields clear of the on-screen keyboard
+  document.addEventListener("focusin", function (ev) {
+    var t = ev.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"))
+      setTimeout(function () { try { t.scrollIntoView({block: "center", behavior: "smooth"}); } catch (e) {} }, 300);
+  });
+
+  renderRows(); renderReasons(); renderProducts();
+  $("name").value = state.name; $("diger").value = state.diger;
+  $("amount").value = state.amount; $("not").value = state.note;
+  update();
+})();
+</script>
+</body>
+</html>
