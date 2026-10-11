@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Yeni rapor</title>
+<meta name="referrer" content="no-referrer">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root {
@@ -148,7 +149,7 @@ textarea { min-height: 96px; resize: vertical; }
       <div class="stack">
         <button type="button" class="opt" id="b-fee-job" aria-pressed="false" hidden></button>
         <div class="pair">
-          <button type="button" class="opt" id="b-fee-other" aria-pressed="false">Farklı tutar</button>
+          <button type="button" class="opt" id="b-fee-other" aria-pressed="false">Tutar gir</button>
           <button type="button" class="opt" id="b-fee-none" aria-pressed="false">Tahsilat yok</button>
         </div>
       </div>
@@ -381,20 +382,9 @@ function restoreDraft(raw, now, data) {
   } catch (e) { return null; }
 }
 
-var SAMPLE = {
-  r: [
-    {i: 101, m: "Şükrü Işık", a: "Üsküdar, Çiçek Sk. 4", u: 800},
-    {i: 102, m: "Ahmet Yılmaz", a: "Kadıköy, Moda Cd. 12", u: 1250},
-    {i: 103, m: "Ayşe Öztürk", a: "Ataşehir, Barbaros Mh.", u: null},
-    {i: 104, m: "İbrahim Çelik", a: "Beşiktaş, Barbaros Blv. 7", u: 1250.5},
-    {i: 105, m: "Gülşen Demir", a: "Maltepe, Bağdat Cd. 220", u: 450},
-    {i: 106, m: "Mehmet Kaya", a: "Pendik", u: 2300},
-    {i: 107, m: "Ömer Şahin", a: "Kartal, Yakacık", u: null},
-    {i: 108, m: "Zeynep Ağaoğlu", a: "Sarıyer, Tarabya Cd. 3", u: 600}
-  ],
-  p: ["Koruyucu", "Duvar aparatı", "Kumanda", "Anten kablosu"],
-  n: ["Parça bekleniyor", "Müşteri evde yoktu", "Randevu ertelendi"]
-};
+// No sample customers ship with this page (owner, 11 Oct 2026): it is public,
+// and a name on it reads as a real customer. Without a list it shows nothing.
+var SAMPLE = {r: [], p: [], n: []};
 
 if (typeof module !== "undefined") module.exports = {
   foldTr: foldTr, parseMoney: parseMoney, formatMoney: formatMoney, b64urlDecode: b64urlDecode,
@@ -436,10 +426,10 @@ if (typeof module !== "undefined") module.exports = {
       return;
     }
     data = SAMPLE;
-    $("sample").hidden = false;
-    $("sample").textContent = d
-      ? "Bağlantıdaki veri okunamadı; örnek veri gösteriliyor (yalnızca test için)."
-      : "Bağlantıda veri yok; örnek veri gösteriliyor (yalnızca test için).";
+    $("fatal").hidden = false;
+    $("fatal").textContent = "Bu sayfa yalnızca Telegram içinden, rapor botundaki 'Yeni rapor' düğmesiyle açılır.";
+    $("form").hidden = true;
+    return;
   }
   if (inTelegram && !canSend) {
     $("fatal").hidden = false;
