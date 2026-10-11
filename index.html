@@ -425,6 +425,12 @@ if (typeof module !== "undefined") module.exports = {
   var data = null;
   var params = new URLSearchParams(location.search);
   var d = params.get("d");
+  if (!d) {
+    // In the fragment: that part of an address stays on the phone and is never
+    // sent to the server this page is hosted on. Telegram adds its own
+    // "tgWebApp…" entries to the same fragment; they do not get in the way.
+    try { d = new URLSearchParams(location.hash.replace(/^#/, "")).get("d"); } catch (e) { d = null; }
+  }
   if (d) data = parsePayload(d);
   if (!data) {
     if (inTelegram) {
