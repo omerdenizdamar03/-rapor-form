@@ -43,6 +43,8 @@ h2 { font-size: 17px; margin: 0 0 10px; outline: none; }
 h2 .req { color: var(--err); }
 .sub { font-size: 15px; font-weight: 600; margin: 14px 0 8px; display: block; }
 .stack { display: flex; flex-direction: column; gap: 8px; }
+/* the devices of one customer, hanging under that customer's card */
+.stack.sub { margin: 0 0 4px 16px; padding-left: 12px; border-left: 3px solid var(--btn); }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .opt {
   display: block; width: 100%; min-height: 52px; padding: 10px 14px; margin: 0;
@@ -263,7 +265,10 @@ function parsePayload(d) {
       if (!r || typeof r.m !== "string" || !r.m.trim()) return;
       if (typeof r.i !== "number" && typeof r.i !== "string") return;
       var u = (typeof r.u === "number" && isFinite(r.u) && r.u > 0) ? r.u : null;
-      rows.push({i: r.i, m: r.m, a: typeof r.a === "string" ? r.a : "", u: u});
+      // c: which device this row is; g: rows sharing it belong to one customer.
+      rows.push({i: r.i, m: r.m, a: typeof r.a === "string" ? r.a : "", u: u,
+                 c: typeof r.c === "string" ? r.c : "",
+                 g: (typeof r.g === "number" || typeof r.g === "string") ? r.g : null});
     });
     function strs(x) {
       var out = [];
@@ -480,19 +485,56 @@ if (typeof module !== "undefined") module.exports = {
     btn.appendChild(document.createTextNode(m));
     if (a) btn.appendChild(el("small", "", a));
   }
+  // A customer with several devices on the list is ONE card; tapping it opens
+  // the devices underneath, and the report is for the one that is picked.
+  var openGroup = null;
+  function deviceName(r) { return r.c || "Cihaz belirtilmemiş"; }
+  function joined(a, b) { return a && b ? a + " · " + b : (a || b || ""); }
+  function groupsOf(rows) {
+    var order = [], byKey = {};
+    rows.forEach(function (r) {
+      var key = r.g === null ? "r" + r.i : "g" + r.g;
+      if (!byKey[key]) { byKey[key] = []; order.push(key); }
+      byKey[key].push(r);
+    });
+    return order.map(function (key) { return {key: key, rows: byKey[key]}; });
+  }
   function renderRows() {
     var box = $("rows");
     box.textContent = "";
     var q = foldTr(filterText.trim()), shown = 0;
-    data.r.forEach(function (r) {
-      if (q && foldTr(r.m + " " + r.a).indexOf(q) < 0) return;
+    groupsOf(data.r).forEach(function (grp) {
+      var first = grp.rows[0];
+      var text = grp.rows.map(function (r) { return r.m + " " + r.a + " " + r.c; }).join(" ");
+      if (q && foldTr(text).indexOf(q) < 0) return;
       var b = el("button", "opt");
       b.type = "button";
-      press(b, false);
-      cardLabel(b, r.m, r.a);
-      b.addEventListener("click", function () { setRow(r.i); });
-      box.appendChild(b);
       shown++;
+      if (grp.rows.length === 1) {
+        press(b, false);
+        cardLabel(b, first.m, joined(first.c, first.a));
+        b.addEventListener("click", function () { setRow(first.i); });
+        box.appendChild(b);
+        return;
+      }
+      var open = openGroup === grp.key;
+      b.setAttribute("aria-expanded", open ? "true" : "false");
+      cardLabel(b, first.m, joined(grp.rows.length + " cihaz" + (open ? "" : " — seçmek için dokunun"), first.a));
+      b.addEventListener("click", function () { openGroup = open ? null : grp.key; renderRows(); });
+      box.appendChild(b);
+      if (!open) return;
+      var sub = el("div", "stack sub");
+      sub.setAttribute("role", "group");
+      sub.setAttribute("aria-label", first.m + " cihazları");
+      grp.rows.forEach(function (r) {
+        var d = el("button", "opt");
+        d.type = "button";
+        press(d, false);
+        cardLabel(d, deviceName(r), r.u ? formatMoney(r.u) : "");
+        d.addEventListener("click", function () { setRow(r.i); });
+        sub.appendChild(d);
+      });
+      box.appendChild(sub);
     });
     if (!shown) box.appendChild(el("p", "hint", data.r.length ? "Eşleşen iş yok." : "Bugünün listesinde iş yok."));
   }
@@ -589,7 +631,7 @@ if (typeof module !== "undefined") module.exports = {
     if (!picking) {
       var row = state.row === null ? null : findRow(data, state.row);
       var c = $("chosen-card");
-      if (row) cardLabel(c, row.m, row.a); else cardLabel(c, "Listede yok", "");
+      if (row) cardLabel(c, row.m, joined(row.c, row.a)); else cardLabel(c, "Listede yok", "");
     }
     press($("b-yok"), false);
     $("filter").hidden = !(picking && data.r.length > 6);
